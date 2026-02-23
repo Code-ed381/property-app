@@ -2,6 +2,72 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+
+export async function createTenant(data: { email?: string; phone?: string; apartment_id: string }) {
+  const supabase = await createClient();
+
+  // 1. Validate apartment exists and is vacant
+  const { data: apartment, error: aptError } = await supabase
+    .from("apartments")
+    .select("id, room_number, status")
+    .eq("id", data.apartment_id)
+    .single();
+
+  if (aptError || !apartment || apartment.status !== "VACANT") {
+    throw new Error("Invalid or unavailable apartment selected.");
+  }
+
+  // 2. Generate a fresh 6-digit passcode for this tenant
+  const rawPasscode = Math.floor(100000 + Math.random() * 900000).toString();
+  const salt = await bcrypt.genSalt(10);
+  const hashedPasscode = await bcrypt.hash(rawPasscode, salt);
+
+  // 3. Create the tenant record
+  const { data: newTenant, error: tenantError } = await supabase
+    .from("tenants")
+    .insert([{
+      email: data.email || null,
+      phone: data.phone || null,
+      apartment_id: data.apartment_id,
+      password_hash: hashedPasscode,
+      must_change_pass: true,
+      is_active: true,
+      onboarding_done: false,
+    }])
+    .select()
+    .single();
+
+  if (tenantError) {
+    // Check for unique constraint violations (e.g., apartment already has a tenant)
+    if (tenantError.code === '23505') {
+      throw new Error("This apartment already has an assigned tenant.");
+    }
+    throw new Error(`Failed to create tenant: ${tenantError.message}`);
+  }
+
+  // 4. Update the apartment status to OCCUPIED
+  const { error: updateAptError } = await supabase
+    .from("apartments")
+    .update({ status: 'OCCUPIED' })
+    .eq("id", data.apartment_id);
+
+  if (updateAptError) {
+    console.error("Failed to update apartment status, but tenant was created:", updateAptError);
+  }
+
+  revalidatePath("/admin/tenants");
+  revalidatePath("/admin/apartments");
+
+  // Return the tenant details + the RAW credentials to show to the admin ONCE
+  return {
+    ...newTenant,
+    _credentials: {
+      room_number: apartment.room_number,
+      raw_passcode: rawPasscode,
+    }
+  };
+}
 
 export async function getTenants() {
   const supabase = await createClient();

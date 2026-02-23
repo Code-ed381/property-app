@@ -31,11 +31,18 @@ const navItems = [
   { icon: Wrench, label: "Maintenance", href: "/admin/maintenance" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  className?: string;
+}
+
+export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex w-72 flex-col fixed inset-y-0 z-50 bg-slate-950 border-r border-slate-800/50">
+    <aside className={cn(
+      "flex flex-col bg-slate-950 border-r border-slate-800/50",
+      className
+    )}>
       {/* Brand Logo */}
       <div className="p-6">
         <Link href="/admin" className="flex items-center gap-3">

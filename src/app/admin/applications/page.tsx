@@ -55,6 +55,8 @@ const mockApplications: Application[] = [
   },
 ];
 
+import { RealtimeSubscriber } from "@/components/realtime-subscriber";
+
 export default async function ApplicationsPage() {
   const applicationsData = await getApplications();
   
@@ -63,6 +65,7 @@ export default async function ApplicationsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <RealtimeSubscriber table="applications" />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
          <div>
            <h1 className="text-3xl font-bold text-white tracking-tight">Applications</h1>

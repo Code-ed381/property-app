@@ -10,7 +10,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Sidebar - Fixed on desktop */}
-      <Sidebar />
+      <Sidebar className="hidden lg:flex w-72 fixed inset-y-0 z-50" />
 
       {/* Main Content Area */}
       <div className="flex flex-col min-h-screen">

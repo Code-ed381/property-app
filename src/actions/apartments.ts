@@ -20,6 +20,22 @@ export async function getApartments() {
   return data;
 }
 
+export async function getVacantApartments() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("apartments")
+    .select("id, unit_name, unit_number, type, monthly_rent, room_number")
+    .eq("status", "VACANT")
+    .order("unit_name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching vacant apartments:", error);
+    return [];
+  }
+
+  return data;
+}
+
 export async function createApartment(formData: any) {
   const supabase = await createClient();
   
@@ -116,4 +132,17 @@ export async function archiveApartment(id: string) {
   revalidatePath(`/admin/apartments/${id}`);
   revalidatePath("/admin/apartments");
   return data;
+}export async function deleteApartment(id: string) {
+  const supabase = await createClient();
+  
+  const { error } = await supabase
+    .from("apartments")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/apartments");
 }

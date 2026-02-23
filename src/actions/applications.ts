@@ -84,6 +84,41 @@ export async function reviewApplication(
   }
 
   // 2. If approved, update tenant onboarding status
+  let tenantEmail = "";
+  let unitName = "your apartment";
+
+  if (application.tenant_id) {
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("email, phone, apartment:apartments(unit_name)")
+      .eq("id", application.tenant_id)
+      .single();
+
+    if (tenant) {
+      tenantEmail = tenant.email;
+      unitName = tenant.apartment?.[0]?.unit_name || "your apartment";
+      
+      try {
+        const { sendNotification } = await import('@/lib/notifications/dispatcher');
+        const { ApplicationStatusEmail } = await import('@/emails/ApplicationStatusEmail');
+        
+        await sendNotification({
+          to: { email: tenantEmail, phone: tenant.phone },
+          subject: `Application ${decision === "APPROVED" ? "Approved" : "Update"} - PILAS Properties`,
+          emailComponent: ApplicationStatusEmail({
+            applicantName: tenantEmail.split('@')[0],
+            unitName: unitName,
+            status: decision,
+            portalUrl: "https://pilasproperties.com/tenant-login"
+          }),
+          smsMessage: `PILAS Properties: Your application for ${unitName} has been ${decision.toLowerCase()}. Check your email for more details.`
+        });
+      } catch (notifError) {
+        console.error("Failed to send application status notification:", notifError);
+      }
+    }
+  }
+
   if (decision === "APPROVED" && application.tenant_id) {
     const { error: tenantError } = await supabase
       .from("tenants")
@@ -94,12 +129,41 @@ export async function reviewApplication(
       console.error("Failed to update tenant onboarding status:", tenantError);
     }
     
-    // In Phase 4, Agreement Generation would be triggered here.
+    // 3. Automate Agreement Generation in Phase 4
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("*, apartment:apartments(*)")
+      .eq("id", application.tenant_id)
+      .single();
+
+    if (tenant && tenant.apartment) {
+      const apartment: any = Array.isArray(tenant.apartment) ? tenant.apartment[0] : tenant.apartment;
+      if (apartment) {
+        const leaseStart = new Date().toISOString().split('T')[0];
+        const leaseEnd = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]; // Default 1 year
+        const rent = apartment.monthly_rent || 0;
+        const deposit = rent * 2;
+
+        try {
+          await (await import('./agreements')).createAgreement(
+            tenant.id,
+            id,
+            leaseStart,
+            leaseEnd,
+            rent,
+            deposit
+          );
+        } catch (genError) {
+          console.error("Auto-Agreement generation failed:", genError);
+        }
+      }
+    }
   }
 
   revalidatePath(`/admin/applications/${id}`);
   revalidatePath("/admin/applications");
   revalidatePath("/admin/tenants");
+  revalidatePath("/admin/agreements");
   
   return application;
 }
@@ -115,9 +179,13 @@ export async function submitApplication(data: any) {
     .select("id")
     .order("created_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  const tenantId = tenant?.id || null; // Requires an existing tenant
+  if (!tenant) {
+    throw new Error("No active tenant found to link this application to. Please create a tenant in the Admin section first.");
+  }
+
+  const tenantId = tenant.id;
 
   const payload = {
     tenant_id: tenantId,

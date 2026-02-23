@@ -1,4 +1,5 @@
 import React from "react";
+import { TenantShell } from "@/components/tenant/tenant-shell";
 
 export default function TenantLayout({
   children,
@@ -7,11 +8,9 @@ export default function TenantLayout({
 }) {
   return (
     <div className="bg-slate-950 min-h-screen font-sans antialiased text-slate-300">
-      {/* 
-        This is the base layout for all /tenant routes. 
-        It provides the underlying dark background universally.
-      */}
-      {children}
+      <TenantShell>
+        {children}
+      </TenantShell>
     </div>
   );
 }

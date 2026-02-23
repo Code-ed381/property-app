@@ -18,7 +18,7 @@ export async function getAgreements() {
           unit_name,
           unit_number,
           room_number,
-          base_rent
+          monthly_rent
         )
       )
     `)
@@ -137,6 +137,31 @@ export async function signAgreement(id: string, signatureUrl: string) {
       .from("tenants")
       .update({ is_active: true })
       .eq("id", data.tenant_id);
+  }
+
+  revalidatePath(`/admin/agreements/${id}`);
+  revalidatePath("/admin/agreements");
+  return data;
+}
+
+export async function adminSignAgreement(id: string, signatureUrl: string) {
+  const supabase = await createClient();
+  
+  // We omit admin_signed_by_id mapping for now until auth context is fully injected,
+  // but we update the crucial components to move the agreement to ACTIVE.
+  const { data, error } = await supabase
+    .from("agreements")
+    .update({ 
+      status: 'ACTIVE',
+      admin_signature_url: signatureUrl,
+      admin_signed_at: new Date().toISOString()
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to counter-sign agreement: ${error.message}`);
   }
 
   revalidatePath(`/admin/agreements/${id}`);

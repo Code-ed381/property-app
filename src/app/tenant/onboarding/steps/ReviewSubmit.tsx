@@ -21,7 +21,7 @@ export function ReviewSubmitStep() {
       await submitApplication(data);
       
       toast.success("Application successfully submitted!");
-      router.push("/tenant/dashboard"); // Assuming they'll go to dashboard next Phase
+      router.push("/tenant"); 
     } catch (error: any) {
       toast.error(error.message || "Failed to submit application. Please try again.");
       setIsSubmitting(false);

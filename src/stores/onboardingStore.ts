@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface OnboardingData {
   // Step 1: Personal Info
@@ -92,14 +93,22 @@ interface OnboardingStore {
   reset: () => void;
 }
 
-export const useOnboardingStore = create<OnboardingStore>((set) => ({
-  currentStep: 1,
-  data: defaultData,
-  setStep: (step) => set({ currentStep: step }),
-  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 7) })),
-  prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
-  updateData: (partialData) => set((state) => ({ 
-    data: { ...state.data, ...partialData } 
-  })),
-  reset: () => set({ currentStep: 1, data: defaultData }),
-}));
+export const useOnboardingStore = create<OnboardingStore>()(
+  persist(
+    (set) => ({
+      currentStep: 1,
+      data: defaultData,
+      setStep: (step) => set({ currentStep: step }),
+      nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 7) })),
+      prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
+      updateData: (partialData) => set((state) => ({ 
+        data: { ...state.data, ...partialData } 
+      })),
+      reset: () => set({ currentStep: 1, data: defaultData }),
+    }),
+    {
+      name: 'pilas-onboarding-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);

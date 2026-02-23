@@ -2,8 +2,9 @@ import React from "react";
 import { TenantTable } from "@/components/admin/tenants/tenant-table";
 import { getTenants } from "@/actions/tenants";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { Tenant } from "@/components/admin/tenants/tenant-columns";
+import Link from "next/link";
 
 // Mock data to show something if the DB fetch returns empty
 const mockTenants: Tenant[] = [
@@ -69,6 +70,12 @@ export default async function TenantsPage() {
              <Download className="mr-2 h-4 w-4" />
              Export CSV
            </Button>
+           <Link href="/admin/tenants/new">
+             <Button className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-6 h-11 shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95">
+               <Plus className="mr-2 h-4 w-4" />
+               New Tenant
+             </Button>
+           </Link>
          </div>
       </div>
 

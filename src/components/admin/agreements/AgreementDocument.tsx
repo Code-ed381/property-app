@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { dispatchAgreementMail } from "@/actions/agreements";
+import { AdminSignaturePad } from "./AdminSignaturePad";
 
 interface AgreementDocumentProps {
   agreement: any; // We'll pass the joined data from getAgreementById
@@ -18,6 +19,7 @@ interface AgreementDocumentProps {
 export function AgreementDocument({ agreement, role = "ADMIN" }: AgreementDocumentProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [isSignaturePadOpen, setIsSignaturePadOpen] = useState(false);
   const documentRef = useRef<HTMLDivElement>(null);
 
   const tenant = agreement.tenant;
@@ -74,8 +76,10 @@ export function AgreementDocument({ agreement, role = "ADMIN" }: AgreementDocume
 
   const statusBadge = () => {
     switch (agreement.status) {
-      case "SIGNED":
+      case "ACTIVE":
         return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-3 py-1 flex w-fit gap-1 text-sm"><CheckCircle2 className="w-4 h-4" /> Fully Executed & Active</Badge>;
+      case "SIGNED":
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-3 py-1 flex w-fit gap-1 text-sm"><CheckCircle2 className="w-4 h-4" /> Tenant Signed (Awaiting Countersign)</Badge>;
       case "PENDING_SIGNATURE":
         return <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1 flex w-fit gap-1 text-sm"><Clock className="w-4 h-4" /> Awaiting Applicant Signature</Badge>;
       default:
@@ -102,6 +106,15 @@ export function AgreementDocument({ agreement, role = "ADMIN" }: AgreementDocume
             Export PDF
           </Button>
 
+          {role === "ADMIN" && agreement.status === 'SIGNED' && (
+            <Button 
+              onClick={() => setIsSignaturePadOpen(true)}
+              className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 h-11 rounded-xl"
+            >
+              Countersign Lease
+            </Button>
+          )}
+
           {role === "ADMIN" && (agreement.status === 'DRAFT' || agreement.status === 'PENDING_SIGNATURE') && (
             <Button 
               onClick={handleDispatch}
@@ -114,6 +127,12 @@ export function AgreementDocument({ agreement, role = "ADMIN" }: AgreementDocume
           )}
         </div>
       </div>
+
+      <AdminSignaturePad 
+        agreementId={agreement.id} 
+        isOpen={isSignaturePadOpen} 
+        onOpenChange={setIsSignaturePadOpen} 
+      />
 
       {/* Actual PDF Document Container - Rendered purely for A4 export */}
       <div className="overflow-x-auto pb-8">
@@ -182,17 +201,20 @@ export function AgreementDocument({ agreement, role = "ADMIN" }: AgreementDocume
                  <div className="flex justify-between items-end">
                     
                     <div className="w-[45%]">
-                      <div className="h-16 mb-2 border-b border-black flex items-end">
-                         {/* Landlord signature is physically or digitally printed in prod, hardcoded text for now */}
-                         <span className="font-cursive text-2xl text-blue-800 ml-4 mb-2 opacity-50 block">Pilas Admin</span>
+                      <div className="h-16 mb-2 border-b border-black flex items-end justify-center">
+                         {agreement.admin_signature_url ? (
+                            <img src={agreement.admin_signature_url} className="h-full object-contain mb-1 mix-blend-multiply" alt="Admin Signature" />
+                         ) : (
+                            <span className="font-cursive text-2xl text-blue-800 ml-4 mb-2 opacity-50 block">Pilas Admin</span>
+                         )}
                       </div>
                       <p className="font-bold">Landlord / Management Agent</p>
-                      <p className="text-sm text-gray-500">Date: {format(new Date(), 'MMM dd, yyyy')}</p>
+                      <p className="text-sm text-gray-500">Date: {agreement.admin_signed_at ? format(new Date(agreement.admin_signed_at), 'MMM dd, yyyy') : format(new Date(), 'MMM dd, yyyy')}</p>
                     </div>
 
                     <div className="w-[45%]">
                       <div className="h-16 mb-2 border-b border-black flex items-end justify-center">
-                         {agreement.status === 'SIGNED' && agreement.tenant_signature_url ? (
+                         {(agreement.status === 'SIGNED' || agreement.status === 'ACTIVE') && agreement.tenant_signature_url ? (
                             <img src={agreement.tenant_signature_url} className="h-full object-contain mb-1 mix-blend-multiply" alt="Tenant Signature" />
                          ) : (
                             <span className="text-gray-300 italic mb-2 select-none uppercase text-xs tracking-widest">Awaiting Digital Signature</span>

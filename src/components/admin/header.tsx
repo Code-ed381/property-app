@@ -35,9 +35,7 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 bg-slate-950 border-r border-slate-800 w-72">
-          {/* We'll need to pass a prop or handle mobile state inside Sidebar if needed, 
-              but for now we can just show the component */}
-          <Sidebar />
+          <Sidebar className="w-full h-full border-0" />
         </SheetContent>
       </Sheet>
 

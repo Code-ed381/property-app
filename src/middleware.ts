@@ -1,7 +1,37 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { jwtVerify } from "jose";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 1. Check if it's a tenant route (and not an API route which has its own auth checks)
+  if (pathname.startsWith("/tenant") && !pathname.startsWith("/tenant-login") && !pathname.startsWith("/api")) {
+    const token = request.cookies.get("tenant_session")?.value;
+
+    if (!token) {
+      return NextResponse.redirect(new URL("/tenant-login", request.url));
+    }
+
+    try {
+      const secret = process.env.JWT_SECRET_KEY || 'fallback-pilas-tenant-secret-key-32chars';
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+
+      // Force change passcode if required
+      if (
+        payload.must_change_pass === true && 
+        pathname !== "/tenant/settings/change-passcode"
+      ) {
+        return NextResponse.redirect(new URL("/tenant/settings/change-passcode", request.url));
+      }
+
+    } catch (err) {
+      // Invalid/expired token
+      return NextResponse.redirect(new URL("/tenant-login", request.url));
+    }
+  }
+
+  // 2. Default Supabase auth session update for admin routes
   return await updateSession(request);
 }
 

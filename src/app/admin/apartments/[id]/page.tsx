@@ -2,13 +2,24 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApartmentById } from "@/actions/apartments";
-import { ChevronLeft, Edit, Building2, Calendar, DollarSign, KeyRound, CheckCircle2, CircleDashed, Users, Droplet, Archive } from "lucide-react";
+import { 
+  ChevronLeft, 
+  Building2, 
+  User, 
+  CreditCard, 
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Zap,
+  Droplets,
+  Wifi
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArchiveButton } from "@/components/admin/apartments/archive-button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 
-export default async function ApartmentDetailsPage(props: { params: Promise<{ id: string }> }) {
+export default async function ApartmentDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   const apartment = await getApartmentById(id);
 
@@ -16,48 +27,10 @@ export default async function ApartmentDetailsPage(props: { params: Promise<{ id
     notFound();
   }
 
-  const isArchived = apartment.status === "ARCHIVED";
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "VACANT":
-        return <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20 px-3 py-1">Vacant</Badge>;
-      case "OCCUPIED":
-        return <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/20 px-3 py-1">Occupied</Badge>;
-      case "MAINTENANCE":
-        return <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20 px-3 py-1">Maintenance</Badge>;
-      case "ARCHIVED":
-        return <Badge className="bg-slate-500/10 text-slate-500 hover:bg-slate-500/20 border-slate-500/20 px-3 py-1">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const UtilityRow = ({ name, enabled, monthly, annual }: { name: string, enabled: boolean, monthly: number, annual: number }) => (
-    <div className="flex items-center justify-between py-3 border-b border-slate-800/50 last:border-0">
-      <div className="flex items-center gap-3">
-        {enabled ? (
-          <CheckCircle2 className="h-5 w-5 text-green-500" />
-        ) : (
-          <CircleDashed className="h-5 w-5 text-slate-600" />
-        )}
-        <span className="text-slate-300 font-medium">{name}</span>
-      </div>
-      <div className="text-right">
-        {enabled ? (
-          <div className="flex flex-col">
-            <span className="text-white font-semibold">GH₵ {monthly.toLocaleString()}/mo</span>
-            <span className="text-xs text-slate-500">GH₵ {annual.toLocaleString()}/yr</span>
-          </div>
-        ) : (
-          <span className="text-slate-500 text-sm">Disabled</span>
-        )}
-      </div>
-    </div>
-  );
+  const tenant = apartment.tenant;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -69,146 +42,160 @@ export default async function ApartmentDetailsPage(props: { params: Promise<{ id
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-white tracking-tight">{apartment.unit_name}</h1>
-              {getStatusBadge(apartment.status)}
+              <Badge 
+                className={apartment.status === "VACANT" ? "bg-emerald-500/10 text-emerald-500 border-0" : "bg-blue-500/10 text-blue-500 border-0"}
+              >
+                {apartment.status}
+              </Badge>
             </div>
-            <p className="text-slate-400 mt-1 font-medium flex items-center gap-2">
-               Unit {apartment.unit_number} • Level {apartment.floor} • {apartment.type.replace('_', ' ')}
+            <p className="text-slate-400 font-medium mt-1">
+              Unit {apartment.unit_number} • Level {apartment.floor} • {apartment.type.replace("_", " ")}
             </p>
           </div>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-           <ArchiveButton id={id} isArchived={isArchived} />
-           <Link href={`/admin/apartments/${id}/edit`}>
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 rounded-xl px-5 h-11">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit details
-            </Button>
-          </Link>
+        <div className="flex gap-3">
+          <Button variant="outline" className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800" asChild>
+            <Link href={`/admin/apartments/${id}/edit`}>Edit Apartment</Link>
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-500 text-white">Maintenance Log</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column - Main Details */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-slate-900/40 border-slate-800/50 backdrop-blur-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Building2 className="w-48 h-48" />
-            </div>
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-500" /> Room & Access Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-8">
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Room Identifier</p>
-                <div className="flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-slate-400" />
-                  <p className="text-lg font-semibold text-white tracking-wide">{apartment.room_number}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Monthly Rent</p>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-slate-400" />
-                  <p className="text-lg font-semibold text-green-400">GH₵ {Number(apartment.monthly_rent).toLocaleString()}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Standard Lease Term</p>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-slate-400" />
-                  <p className="text-white font-medium">{apartment.lease_months} Months</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Passcode (Encrypted)</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    {[1,2,3,4,5,6].map((i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-slate-600" />
-                    ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Details */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="bg-slate-900/40 border-slate-800 shadow-xl overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-[100px] pointer-events-none" />
+               <CardContent className="pt-6">
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Monthly Rent</div>
+                  <div className="text-2xl font-bold text-white">GH₵ {apartment.monthly_rent?.toLocaleString()}</div>
+               </CardContent>
+            </Card>
+            <Card className="bg-slate-900/40 border-slate-800 shadow-xl">
+               <CardContent className="pt-6">
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Room Access</div>
+                  <div className="text-xl font-bold text-blue-400 font-mono tracking-tighter">{apartment.room_number || "Not assigned"}</div>
+               </CardContent>
+            </Card>
+            <Card className="bg-slate-900/40 border-slate-800 shadow-xl">
+               <CardContent className="pt-6">
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Utilities</div>
+                  <div className="flex gap-2 mt-1">
+                     <Zap className="h-4 w-4 text-amber-500" />
+                     <Droplets className="h-4 w-4 text-blue-500" />
+                     <Wifi className="h-4 w-4 text-purple-500" />
                   </div>
+               </CardContent>
+            </Card>
+          </div>
+
+          {/* Current Tenant Card */}
+          <Card className="bg-slate-900/40 border-slate-800 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-slate-800 pb-4">
+               <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                 <User className="h-4 w-4" /> Current Occupancy
+               </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {tenant ? (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                   <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-500/20">
+                         {tenant.email?.charAt(0).toUpperCase() || "T"}
+                      </div>
+                      <div>
+                         <div className="text-lg font-bold text-white">{tenant.email}</div>
+                         <div className="text-slate-500 text-sm">{tenant.phone || "No phone provided"}</div>
+                         <Badge variant="outline" className="mt-2 text-[10px] bg-emerald-500/10 text-emerald-500 border-0">
+                           ACTIVE TENANCY
+                         </Badge>
+                      </div>
+                   </div>
+                   <Button variant="outline" className="border-slate-800 text-slate-400" asChild>
+                      <Link href={`/admin/tenants/${tenant.id}`}>View Profile</Link>
+                   </Button>
                 </div>
-              </div>
-              {apartment.description && (
-                <div className="col-span-2 mt-4">
-                   <p className="text-sm font-medium text-slate-500 mb-2">Description</p>
-                   <p className="text-slate-300 leading-relaxed text-sm bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                     {apartment.description}
-                   </p>
+              ) : (
+                <div className="text-center py-8">
+                   <div className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
+                      <ShieldCheck className="h-6 w-6" />
+                   </div>
+                   <h3 className="text-white font-bold mb-1">VACANT UNIT</h3>
+                   <p className="text-slate-500 text-sm max-w-xs mx-auto">This apartment is currently available for new applications.</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900/40 border-slate-800/50 backdrop-blur-sm">
-             <CardHeader>
-               <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
-                 <Droplet className="h-5 w-5 text-blue-500" /> Utility Configuration
+          {/* Activity / Lease History (Placeholder) */}
+          <Card className="bg-slate-900/40 border-slate-800 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-slate-800 pb-4">
+               <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                 <Calendar className="h-4 w-4" /> Recent Activity
                </CardTitle>
-               <CardDescription className="text-slate-400">Services tied to this specific unit.</CardDescription>
-             </CardHeader>
-             <CardContent>
-                <UtilityRow 
-                  name="Water & Security" 
-                  enabled={apartment.water_enabled} 
-                  monthly={apartment.water_monthly_rate} 
-                  annual={apartment.water_annual_rate} 
-                />
-                <UtilityRow 
-                  name="Sewage Processing" 
-                  enabled={apartment.sewage_enabled} 
-                  monthly={apartment.sewage_monthly_rate} 
-                  annual={apartment.sewage_annual_rate} 
-                />
-                <UtilityRow 
-                  name="Cleaning & Garbage" 
-                  enabled={apartment.cleaning_enabled} 
-                  monthly={apartment.cleaning_monthly_rate} 
-                  annual={apartment.cleaning_annual_rate} 
-                />
-             </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Tenant & Status */}
-        <div className="space-y-6">
-          <Card className="bg-slate-900/40 border-slate-800/50 backdrop-blur-sm">
-             <CardHeader>
-               <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
-                 <Users className="h-5 w-5 text-blue-500" /> Occupancy Status
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-                {apartment.status === "OCCUPIED" && apartment.tenant ? (
-                  <div className="space-y-4">
-                     <div className="flex items-center gap-3 pb-4 border-b border-slate-800/50">
-                        <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-lg font-bold">
-                          {apartment.tenant.email?.charAt(0).toUpperCase() || 'T'}
+            </CardHeader>
+            <CardContent className="p-0">
+               <div className="divide-y divide-slate-800">
+                  <div className="p-4 flex items-center justify-between hover:bg-slate-800/20 transition-colors">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
+                           <FileText className="h-4 w-4" />
                         </div>
                         <div>
-                           <p className="text-white font-medium">{apartment.tenant.email || 'N/A'}</p>
-                           <p className="text-sm text-slate-400">{apartment.tenant.phone || 'No phone recorded'}</p>
+                           <p className="text-sm font-medium text-white">Apartment Status Updated</p>
+                           <p className="text-xs text-slate-500">Manual update by administrator</p>
                         </div>
                      </div>
-                     <Button variant="outline" className="w-full border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-white" asChild>
-                        <Link href={`/admin/tenants/${apartment.tenant.id}`}>View Tenant Profile</Link>
-                     </Button>
+                     <span className="text-[10px] text-slate-600">{format(new Date(apartment.created_at), 'MMM dd, yyyy')}</span>
                   </div>
-                ) : (
-                  <div className="py-8 text-center bg-slate-950/50 rounded-xl border border-slate-800/50 border-dashed">
-                      <Users className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-                      <p className="text-slate-400 font-medium">No active tenant</p>
-                      <p className="text-xs text-slate-500 mt-1">This unit is currently vacant</p>
-                  </div>
-                )}
-             </CardContent>
+               </div>
+            </CardContent>
           </Card>
         </div>
 
+        {/* Sidebar Widgets */}
+        <div className="space-y-8">
+           <Card className="bg-slate-900 border-slate-800 shadow-xl">
+              <CardHeader className="pb-3 border-b border-slate-800">
+                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-blue-500">Financial Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                 <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Base Rent</span>
+                    <span className="text-white font-bold">GH₵ {apartment.monthly_rent?.toLocaleString()}</span>
+                 </div>
+                 <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Security Deposit</span>
+                    <span className="text-white font-medium">GH₵ {(apartment.monthly_rent * 2).toLocaleString()}</span>
+                 </div>
+                 <div className="h-px bg-slate-800 my-2" />
+                 <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 font-bold">Total Liability</span>
+                    <span className="text-blue-400 font-bold italic">GH₵ {(apartment.monthly_rent * 3).toLocaleString()}</span>
+                 </div>
+              </CardContent>
+           </Card>
+
+           <Card className="bg-slate-900 border-slate-800 shadow-xl">
+              <CardHeader className="pb-3 border-b border-slate-800">
+                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-emerald-500">Access Credentials</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                 <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-600 block mb-2 tracking-tighter">Room Identifier</label>
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-white font-mono text-center tracking-widest">
+                       {apartment.room_number || "PENDING"}
+                    </div>
+                 </div>
+                 <Button variant="ghost" className="w-full text-slate-500 text-xs hover:text-white hover:bg-slate-800 h-8">
+                   Regenerate Access Details
+                 </Button>
+              </CardContent>
+           </Card>
+        </div>
       </div>
     </div>
   );
